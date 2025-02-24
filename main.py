@@ -8,7 +8,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QDate
 from mt5_init import connect_to_mt5
-from get_deals import download_real_transactions, export_transactions_to_excel
+from get_deals import download_real_transactions
+from export_to_excel import export_transactions_to_excel
 
 class LoginDialog(QDialog):
     def __init__(self, parent=None):
