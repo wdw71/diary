@@ -4,6 +4,19 @@ import openpyxl
 from openpyxl.styles import PatternFill
 from PySide6.QtWidgets import QFileDialog, QInputDialog
 
+import MetaTrader5 as mt5
+from datetime import datetime
+import openpyxl
+from openpyxl.styles import PatternFill
+from PySide6.QtWidgets import QFileDialog, QInputDialog
+
+import MetaTrader5 as mt5
+from datetime import datetime
+import openpyxl
+from openpyxl.styles import PatternFill
+from PySide6.QtWidgets import QFileDialog, QInputDialog
+
+
 def download_real_transactions(start_date, end_date, include_opening=True):
     if not mt5.initialize():
         print("MT5 initialization failed.", mt5.last_error())
@@ -19,43 +32,48 @@ def download_real_transactions(start_date, end_date, include_opening=True):
 
     positions = {}
     transactions = []
-    
+
     for deal in deals:
-        print(f"Processing deal: Ticket={deal.ticket}, Position ID={deal.position_id}")
-        
+        print(
+            f"Processing deal: Ticket={deal.ticket}, Position ID={deal.position_id}, Type={'Open' if deal.entry == 0 else 'Close'}, Price={deal.price}, Volume={deal.volume}")
+
         if deal.position_id not in positions:
             positions[deal.position_id] = {
                 "entry_price": 0,
                 "volume": 0,
-                "sl_price": 0,
-                "tp_price": 0,
-                "count": 0,
+                "sl_price": None,
+                "tp_price": None,
                 "entry_time": None,
                 "close_price": 0
             }
-        
+
         pos = positions[deal.position_id]
+
+        # Get SL/TP from historical orders
+        order_data = mt5.history_orders_get(position=deal.position_id)
+        if order_data:
+            last_order = order_data[-1]  # Most recent order info
+            pos["sl_price"] = last_order.sl
+            pos["tp_price"] = last_order.tp
+            print(f"Order Data Found: SL={pos['sl_price']}, TP={pos['tp_price']}")
+        else:
+            print(f"No historical order data found for Position ID: {deal.position_id}")
 
         # Only consider entry trades for these calculations
         if deal.entry == 0:  # Opening or increasing position
             pos["entry_price"] += deal.price * deal.volume
             pos["volume"] += deal.volume
-            pos["sl_price"] += deal.price if deal.type == 0 else 0  # Buy orders
-            pos["tp_price"] += deal.price if deal.type == 0 else 0  # Sell orders
-            pos["count"] += 1
             if pos["entry_time"] is None or deal.time < pos["entry_time"]:
                 pos["entry_time"] = deal.time
 
         # Only consider closing trades for close price calculation
         if deal.entry == 1:  # Closing or reducing position
             pos["close_price"] = deal.price
-            # pos["close_price"] += deal.price * deal.volume
 
     for position_id, pos in positions.items():
         pos["entry_price"] /= pos["volume"] if pos["volume"] > 0 else 1
-        pos["sl_price"] /= pos["count"] if pos["count"] > 0 else 1
-        pos["tp_price"] /= pos["count"] if pos["count"] > 0 else 1
-        # pos["close_price"] /= pos["volume"] if pos["volume"] > 0 else 1
+        print(
+            f"Final calculated values for Position ID {position_id}: Entry Price={pos['entry_price']}, SL Price={pos['sl_price']}, TP Price={pos['tp_price']}, Close Price={pos['close_price']}")
 
     for deal in deals:
         if not include_opening and deal.entry == 0:
@@ -65,14 +83,18 @@ def download_real_transactions(start_date, end_date, include_opening=True):
         sl_price = positions[deal.position_id]["sl_price"]
         tp_price = positions[deal.position_id]["tp_price"]
         close_price = positions[deal.position_id]["close_price"]
-        entry_time = datetime.fromtimestamp(positions[deal.position_id]["entry_time"]).strftime("%H:%M:%S") if positions[deal.position_id]["entry_time"] else ""
+        entry_time = datetime.fromtimestamp(positions[deal.position_id]["entry_time"]).strftime("%H:%M:%S") if \
+        positions[deal.position_id]["entry_time"] else ""
         sl_pips = abs(entry_price - sl_price) * 10000 if sl_price else ""
         tp_pips = abs(tp_price - entry_price) * 10000 if tp_price else ""
         sl_usd = sl_pips * deal.volume * 10 if sl_pips else ""
         rr_plan = round(tp_pips / sl_pips, 2) if sl_pips and tp_pips else "N/A"
         rr_fact = round(deal.profit / sl_usd, 2) if sl_usd else "N/A"
         result_pips = (close_price - entry_price) * 10000 if close_price and entry_price else ""
-        
+
+        print(
+            f"Exporting Deal Ticket={deal.ticket}: Entry Price={entry_price}, SL Price={sl_price}, TP Price={tp_price}, Close Price={close_price}")
+
         trans = {
             "date": datetime.fromtimestamp(deal.time).strftime("%d.%m.%Y"),
             "ticket": str(deal.ticket),
@@ -95,7 +117,7 @@ def download_real_transactions(start_date, end_date, include_opening=True):
             "rr_fact": rr_fact
         }
         transactions.append(trans)
-    
+
     return transactions
 
 def export_transactions_to_excel(transactions):
