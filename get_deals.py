@@ -1,6 +1,5 @@
 ﻿import MetaTrader5 as mt5
 from datetime import datetime
-from PySide6.QtWidgets import QFileDialog, QInputDialog
 
 def download_real_transactions(start_date, end_date, include_opening=True):
     if not mt5.initialize():

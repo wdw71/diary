@@ -1,5 +1,6 @@
 ﻿import openpyxl
 from openpyxl.styles import PatternFill
+from PySide6.QtWidgets import QFileDialog, QInputDialog
 
 def export_transactions_to_excel(transactions):
     if not transactions:
