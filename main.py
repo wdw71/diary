@@ -78,7 +78,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(date_layout)
 
         self.include_opening_checkbox = QCheckBox("Include Opening Trades")
-        self.include_opening_checkbox.setChecked(True)
+        self.include_opening_checkbox.setChecked(False)
         layout.addWidget(self.include_opening_checkbox)
 
         self.download_button = QPushButton("Download Transactions")
