@@ -55,6 +55,7 @@ class MainWindow(QMainWindow):
         self.resize(400, 350)
 
         self.transactions = []
+        self.summary = {}
 
         layout = QVBoxLayout()
         central_widget = QWidget()
@@ -117,7 +118,7 @@ class MainWindow(QMainWindow):
         end = self.end_date.date().toPython()
         include_opening = self.include_opening_checkbox.isChecked()
 
-        self.transactions = download_real_transactions(start, end, include_opening)
+        self.transactions, self.summary = download_real_transactions(start, end, include_opening)
         QMessageBox.information(self, "Downloaded", f"{len(self.transactions)} transactions downloaded")
 
     def export_transactions(self):
@@ -125,7 +126,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", "No transactions to export.")
             return
 
-        export_transactions_to_excel(self.transactions)
+        export_transactions_to_excel(self.transactions, self.summary)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
