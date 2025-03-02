@@ -2,7 +2,7 @@
 from openpyxl.styles import PatternFill
 from PySide6.QtWidgets import QFileDialog, QInputDialog
 
-def export_transactions_to_excel(transactions):
+def export_transactions_to_excel(transactions, summary):
     if not transactions:
         print("No transactions to export.")
         return
@@ -54,17 +54,15 @@ def export_transactions_to_excel(transactions):
             "",                  # G (empty)
             trans["side"],       # H - Buy/Sell
             trans["entry_price"],# I - Entry Price
-            trans["close_price"],# J - Entry Price
+            trans["close_price"],# J - Close Price
             trans["sl_price"],   # K - SL Price
             trans["sl_pips"],    # L - SL in Pips
-            trans["sl_usd"],     # M - SL in Pips
-            trans["tp_price"],   # N - TP Price
-            trans["tp_pips"],    # O - TP in Pips
-            trans["volume"],     # P - Volume
-            trans["result_pips"],# Q - Result in Pips
-            trans["result_usd"], # R - Result in USD
-            trans["rr_plan"],    # S - Winrate Plan
-            trans["rr_fact"]     # T - Winrate Fact
+            trans["tp_price"],   # M - TP Price
+            trans["tp_pips"],    # N - TP in Pips
+            trans["volume"],     # O - Volume
+            trans["result_pips"],# P - Result in Pips
+            trans["result_usd"], # Q - Result in USD
+            trans["category"]    # R - Win/Loss/Zero Classification
         ]
 
         ws.append(row)
@@ -79,8 +77,26 @@ def export_transactions_to_excel(transactions):
             for col in range(1, len(row) + 1):
                 ws.cell(row=current_row, column=col).fill = fill
 
+    # Insert summary row
+    summary_row = ["Summary", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
+    ws.append(summary_row)
+
+    summary_data = [
+        ["Total Result (USD)", summary["total_result"]],
+        ["Total Deals", summary["total_count"]],
+        ["Win Deals", summary["win_count"], f"{(summary["win_count"] / summary["total_count"] * 100):.2f}%"],
+        ["Lose Deals", summary["lose_count"], f"{(summary["lose_count"] / summary["total_count"] * 100):.2f}%"],
+        ["Zero Deals", summary["zero_count"], f"{(summary["zero_count"] / summary["total_count"] * 100):.2f}%"],
+        ["Win Result (USD)", summary["win_result"]],
+        ["Lose Result (USD)", summary["lose_result"]],
+        ["Zero Result (USD)", summary["zero_result"]]
+    ]
+
+    for row_data in summary_data:
+        ws.append(row_data)
+
     try:
         wb.save(file_path)
-        print(f"Transactions successfully added to sheet '{sheet_name}' in {file_path}")
+        print(f"Transactions and summary successfully added to sheet '{sheet_name}' in {file_path}")
     except Exception as e:
         print(f"Error saving file: {e}")
